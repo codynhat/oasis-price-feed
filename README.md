@@ -14,7 +14,7 @@ This project uses *Python 3.6.6* and requires *virtualenv* to be installed.
 
 In order to clone the project and install required third-party packages please execute:
 ```
-git clone https://github.com/makerdao/uniswap-price-feed.git
+git clone https://github.com/codynhat/oasis-price-feed.git
 cd oasis-price-feed
 git submodule update --init --recursive
 ./install.sh

@@ -17,7 +17,7 @@
 
 import base64
 
-from uniswap_price_feed.config import Config
+from oasis_price_feed.config import Config
 
 
 class AuthenticationMixin(object):

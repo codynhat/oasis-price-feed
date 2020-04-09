@@ -1,14 +1,12 @@
-# uniswap-price-feed
+# oasis-price-feed
 
-This repository contains a standalone service for publishing Uniswap prices over Websockets.
+This repository contains a standalone service for publishing Oasis prices over Websockets.
 
 
 ## Rationale
 
-This service facilitates distribution of real-time Uniswap prices to keeper bots from the `market-maker-keeper`
-<https://github.com/makerdao/market-maker-keeper> repository. Prices are retrieved from chain every second.
-The average of last 60 prices are reported to subscribed clients.
-
+This service facilitates distribution of real-time Oasis prices to keeper bots from the `market-maker-keeper`
+<https://github.com/makerdao/market-maker-keeper> repository. 
 
 ## Installation
 
@@ -17,7 +15,7 @@ This project uses *Python 3.6.6* and requires *virtualenv* to be installed.
 In order to clone the project and install required third-party packages please execute:
 ```
 git clone https://github.com/makerdao/uniswap-price-feed.git
-cd uniswap-price-feed
+cd oasis-price-feed
 git submodule update --init --recursive
 ./install.sh
 ```
@@ -26,18 +24,18 @@ git submodule update --init --recursive
 ## Running
 
 ```
-usage: uniswap-price-feed [-h] [--rpc-host RPC_HOST] [--rpc-port RPC_PORT]
-                          [--rpc-timeout RPC_TIMEOUT]
-                          [--http-address HTTP_ADDRESS]
-                          [--http-port HTTP_PORT]
-                          [--base-exchange-address BASE_EXCHANGE_ADDRESS]
-                          [--base-token-symbol BASE_TOKEN_SYMBOL]
-                          [--base-token-address BASE_TOKEN_ADDRESS]
-                          --quote-exchange-address QUOTE_EXCHANGE_ADDRESS
-                          --quote-token-symbol QUOTE_TOKEN_SYMBOL
-                          --quote-token-address QUOTE_TOKEN_ADDRESS
-                          [--report-time REPORT_TIME]
-                          [--ro-account RO_ACCOUNT]
+usage: oasis-price-feed [-h] [--rpc-host RPC_HOST] [--rpc-port RPC_PORT]
+                        [--rpc-timeout RPC_TIMEOUT]
+                        [--http-address HTTP_ADDRESS] [--http-port HTTP_PORT]
+                        [--base-exchange-address BASE_EXCHANGE_ADDRESS]
+                        [--base-token-symbol BASE_TOKEN_SYMBOL]
+                        [--base-token-address BASE_TOKEN_ADDRESS]
+                        --base-token-decimals BASE_TOKEN_DECIMALS
+                        --quote-token-symbol QUOTE_TOKEN_SYMBOL
+                        --quote-token-address QUOTE_TOKEN_ADDRESS
+                        --quote-token-decimals QUOTE_TOKEN_DECIMALS
+                        [--report-time REPORT_TIME] [--ro-account RO_ACCOUNT]
+                        [--rw-account RW_ACCOUNT]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -46,51 +44,32 @@ optional arguments:
   --rpc-timeout RPC_TIMEOUT
                         JSON-RPC timeout (in seconds, default: 10)
   --http-address HTTP_ADDRESS
-                        Address of the Uniswap Price Feed
+                        Address of the Oasis Price Feed
   --http-port HTTP_PORT
-                        Port of the Uniswap Price Feed
+                        Port of the Oasis Price Feed
   --base-exchange-address BASE_EXCHANGE_ADDRESS
-                        Address of the Uniswap Exchange
+                        Address of the Oasis Exchange
   --base-token-symbol BASE_TOKEN_SYMBOL
                         Token symbol
   --base-token-address BASE_TOKEN_ADDRESS
                         Token address
-  --quote-exchange-address QUOTE_EXCHANGE_ADDRESS
-                        Address of the Quote Uniswap Exchange
+  --base-token-decimals BASE_TOKEN_DECIMALS
+                        Base Token decimals
   --quote-token-symbol QUOTE_TOKEN_SYMBOL
                         Quote Token symbol
   --quote-token-address QUOTE_TOKEN_ADDRESS
                         Quote Token address
+  --quote-token-decimals QUOTE_TOKEN_DECIMALS
+                        Quote Token decimals
   --report-time REPORT_TIME
-                        Time interval to report price
+                        Time interval to report price in seconds
   --ro-account RO_ACCOUNT
                         Credentials of the read-only user (format:
                         username:password)
-```
+  --rw-account RW_ACCOUNT
+                        Credentials of the read-write user (format:
+                        username:password)
 
-## Sample scripts
-
-- ETH-DAI price feed (e.g. pass `--price-feed` command line argument to keeper bot as `ws://user:readonly@localhost:7777/price/ETH-DAI/socket`)
-```
-bin/uniswap-price-feed \
-    --quote-exchange-address 0x09cabEC1eAd1c0Ba254B09efb3EE13841712bE14 \
-    --quote-token-symbol DAI \
-    --quote-token-address 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 \
-    --ro-account user:readonly
-```
-
-- MKR-DAI price feed (e.g. pass `--price-feed` command line argument to keeper bot as `ws://user:readonly@localhost:7778/price/MKR-DAI/socket`):
-```
-bin/uniswap-price-feed \
-    --base-exchange-address 0x2C4Bd064b998838076fa341A83d007FC2FA50957 \
-    --base-token-symbol MKR \
-    --base-token-address 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 \
-    --quote-exchange-address 0x09cabEC1eAd1c0Ba254B09efb3EE13841712bE14 \
-    --quote-token-symbol DAI \
-    --quote-token-address 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 \
-    --ro-account user:readonly \
-    --http-port 7778 \
-    --report-time 2
 ```
 
 ## API

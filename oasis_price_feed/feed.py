@@ -25,22 +25,23 @@ import logging
 import time
 import threading
 import collections
+from pymaker.model import Token
 
-from uniswap_price_feed.auth import AuthenticationMixin, auth_required
-from uniswap_price_feed.config import Config
+from oasis_price_feed.auth import AuthenticationMixin, auth_required
+from oasis_price_feed.config import Config
 
 from tornado import concurrent
 
 
 class FeedSocketHandler(tornado.websocket.WebSocketHandler, AuthenticationMixin):
 
-    def initialize(self, base_uniswap, quote_uniswap, config: Config):
-        self.base_uniswap = base_uniswap
-        self.quote_uniswap = quote_uniswap
+    def initialize(self, otc, base_token: Token, quote_token: Token, config: Config):
+        self.otc = otc
+        self.base_token = base_token
+        self.quote_token = quote_token
         self.config = config
         self.feed_name = f"{config.base_symbol}-{config.quote_symbol}"
 
-        self.one_minute_prices = collections.deque(maxlen=60)
         self.price = None
 
         self.executor = concurrent.futures.ThreadPoolExecutor(1)
@@ -48,21 +49,25 @@ class FeedSocketHandler(tornado.websocket.WebSocketHandler, AuthenticationMixin)
         def calculate_price():
             while True:
                 try:
-                    logging.debug("Fetching prices from Uniswap")
-                    if self.base_uniswap is not None:
-                        current_price = float(self.quote_uniswap.get_exchange_rate() / self.base_uniswap.get_exchange_rate())
-                    else:
-                        current_price = float(self.quote_uniswap.get_exchange_rate())
+                    logging.debug("Fetching prices from Oasis")
 
-                    self.one_minute_prices.append(current_price)
-                    self.price = sum(self.one_minute_prices) / len(self.one_minute_prices)
+                    best_buy_id = self.otc._contract.functions.getBestOffer(base_token.address.address, quote_token.address.address).call()
+                    best_sell_id = self.otc._contract.functions.getBestOffer(quote_token.address.address, base_token.address.address).call()
 
-                    logging.info(f"new price {self.price} calculated from {len(self.one_minute_prices)} prices, sleep for 1 seconds")
-                    time.sleep(1)
+                    best_buy_order = self.otc.get_order(best_buy_id)
+                    best_sell_order = self.otc.get_order(best_sell_id)
+
+                    best_buy_price = float(self.quote_token.normalize_amount(best_buy_order.pay_amount) / self.base_token.normalize_amount(best_buy_order.buy_amount))
+                    best_sell_price = float(self.quote_token.normalize_amount(best_sell_order.buy_amount) / self.base_token.normalize_amount(best_sell_order.pay_amount))
+
+                    self.price = best_buy_price + ((best_sell_price -  best_buy_price) / 2)
+
+                    logging.info(f"new price {self.price} calculated, sleep for {self.config.report_time} seconds")
+                    time.sleep(self.config.report_time)
                 except:
-                    logging.error("Cannot calculate price, sleep for 5 seconds")
+                    logging.error("Cannot calculate price, sleep for {self.config.report_time} seconds")
                     self.price = None
-                    time.sleep(5)
+                    time.sleep(self.config.report_time)
 
         self.executor.submit(calculate_price)
 

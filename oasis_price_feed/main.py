@@ -1,6 +1,5 @@
-# This file is part of Maker Keeper Framework.
 #
-# Copyright (C) 2019 grandizzy
+# Copyright (C) 2020 Cody Hatfield
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -19,20 +18,21 @@ import argparse
 import logging
 import sys
 import tornado
-from uniswap_price_feed.feed import FeedSocketHandler
-from uniswap_price_feed.config import Config
+from oasis_price_feed.feed import FeedSocketHandler
+from oasis_price_feed.config import Config
 from web3 import Web3, HTTPProvider
 
-from pyexchange.uniswap import Uniswap
+from pymaker.oasis import Order, MatchingMarket
 from pymaker import Address
+from pymaker.model import Token
 
-class UniswapPriceFeed:
-    """Uniswap Price Feed server."""
+class OasisPriceFeed:
+    """Oasis Price Feed server."""
 
     logger = logging.getLogger()
 
     def __init__(self, args: list, **kwargs):
-        parser = argparse.ArgumentParser(prog='uniswap-price-feed')
+        parser = argparse.ArgumentParser(prog='oasis-price-feed')
 
         parser.add_argument("--rpc-host", type=str, default="localhost",
                             help="JSON-RPC host (default: `localhost')")
@@ -44,22 +44,22 @@ class UniswapPriceFeed:
                             help="JSON-RPC timeout (in seconds, default: 10)")
 
         parser.add_argument("--http-address", type=str, default='',
-                            help="Address of the Uniswap Price Feed")
+                            help="Address of the Oasis Price Feed")
 
         parser.add_argument("--http-port", type=int, default=7777,
-                            help="Port of the Uniswap Price Feed")
+                            help="Port of the Oasis Price Feed")
 
         parser.add_argument("--base-exchange-address", type=str, default=None,
-                            help="Address of the Uniswap Exchange")
+                            help="Address of the Oasis Exchange")
 
         parser.add_argument("--base-token-symbol", type=str, default='ETH',
                             help="Token symbol")
 
         parser.add_argument("--base-token-address", type=str, default='',
                             help="Token address")
-
-        parser.add_argument("--quote-exchange-address", type=str, default='',
-                            help="Address of the Quote Uniswap Exchange", required=True)
+        
+        parser.add_argument("--base-token-decimals", type=int,
+                        help="Base Token decimals", required=True)
 
         parser.add_argument("--quote-token-symbol", type=str, default='',
                         help="Quote Token symbol", required=True)
@@ -67,8 +67,11 @@ class UniswapPriceFeed:
         parser.add_argument("--quote-token-address", type=str, default='',
                         help="Quote Token address", required=True)
 
-        parser.add_argument("--report-time", type=int, default=10,
-                            help="Time interval to report price")
+        parser.add_argument("--quote-token-decimals", type=int,
+                        help="Quote Token decimals", required=True)
+
+        parser.add_argument("--report-time", type=int, default=60,
+                            help="Time interval to report price in seconds")
 
         parser.add_argument("--ro-account", type=str,
                             help="Credentials of the read-only user (format: username:password)")
@@ -88,12 +91,11 @@ class UniswapPriceFeed:
 
         self.web3.eth.defaultAccount = "0x0000000000000000000000000000000000000000"
 
-        if self.arguments.base_exchange_address is not None:
-            self.base_uniswap = Uniswap(self.web3, Address(self.arguments.base_token_address), Address(self.arguments.base_exchange_address))
-        else:
-            self.base_uniswap = None
-
-        self.quote_uniswap = Uniswap(self.web3, Address(self.arguments.quote_token_address), Address(self.arguments.quote_exchange_address))
+        self.otc = MatchingMarket(web3=self.web3,
+                                  address=Address(self.arguments.base_exchange_address))
+        
+        self.base_token = Token(self.arguments.base_token_symbol, Address(self.arguments.base_token_address), self.arguments.base_token_decimals)
+        self.quote_token = Token(self.arguments.quote_token_symbol, Address(self.arguments.quote_token_address), self.arguments.quote_token_decimals)
 
         self.config = Config(
             base_symbol=self.arguments.base_token_symbol,
@@ -104,8 +106,9 @@ class UniswapPriceFeed:
 
         application = tornado.web.Application([
             (f"/price/{self.arguments.base_token_symbol}-{self.arguments.quote_token_symbol}/socket", FeedSocketHandler,
-                dict(base_uniswap=self.base_uniswap,
-                     quote_uniswap=self.quote_uniswap,
+                dict(otc=self.otc,
+                     base_token=self.base_token,
+                     quote_token=self.quote_token,
                      config=self.config))
         ])
         application.listen(port=self.arguments.http_port,address=self.arguments.http_address)
@@ -116,4 +119,4 @@ class UniswapPriceFeed:
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)-15s %(levelname)-8s %(message)s', level=logging.INFO)
-    UniswapPriceFeed(sys.argv[1:]).main()
+    OasisPriceFeed(sys.argv[1:]).main()
